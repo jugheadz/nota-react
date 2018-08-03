@@ -1,0 +1,21 @@
+Users table
+CREATE TABLE users (
+    id serial PRIMARY KEY,
+    name VARCHAR(100),
+    email text UNIQUE NOT NULL,
+    joined TIMESTAMP NOT NULL);
+
+ login table
+ CREATE TABLE login (
+    id serial PRIMARY KEY,
+    hash VARCHAR(100) NOT NULL,
+    email text UNIQUE NOT NULL);
+
+Entries table
+CREATE TABLE entries(
+	id serial PRIMARY KEY,
+	userid INT NOT NULL,
+	title text,
+	note text,
+	tags text
+)

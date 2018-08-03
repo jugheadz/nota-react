@@ -1,0 +1,309 @@
+import React, { Component } from 'react';
+
+import Nav from './components/Nav/Nav';
+import Search from './components/Search/Search';
+import Tags from './components/Tags/Tags';
+import TagsDropdown from './components/TagsDropdown/TagsDropdown';
+import NotesList from './components/NotesList/NotesList';
+import NoteEntry from './components/NoteEntry/NoteEntry';
+
+
+import './App.css';
+
+// const initialState = {
+
+//   route: 'signin',
+//   isSignedIn: false,
+//   user: {
+//     id: '',
+//     name: '',
+//     email: ''
+//   },
+//   notes:[]
+// }
+
+class App extends Component {
+  constructor(){
+    super()
+    this.state = {
+      notes:[],
+      searchfield:'',
+      selected:{
+        id:'',
+        index:''
+      },
+      textvalue:'',
+      recentnote:[],
+      tags:[],
+      showTags:false
+    }
+    this.myRef = React.createRef()
+  }
+
+  loadUser = (data) => {
+    this.setState({user:{
+      id:data.id,
+      name:data.name,
+      email:data.email
+      }
+    })
+  }
+  
+  componentDidMount(){
+    fetch('http://localhost:3000/notes', {
+      method: 'post',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        uid:1
+      })
+    })
+    .then(response => response.json())
+    .then(notes => {this.setState({ notes:notes })})
+    .catch(console.log, 'sign in function')
+  }
+
+  onSearchChange = (event) => {
+    this.setState({ searchfield: event.target.value })
+  }
+
+  createNote = () => {
+    fetch('http://localhost:3000/newnote', {
+        method: 'post',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+        uid:1
+        })
+      })
+      .then(response => response.json())
+      .then(note => {
+        const newNotesArray = this.state.notes.slice()
+        newNotesArray.unshift(note)
+        this.setState({selected:{id:note.id,index:0}})
+        this.setState({notes: newNotesArray, textvalue:''})
+      })
+      .catch(console.log, 'new note function')
+  }
+
+  onNewNote = () => {
+    
+    if(this.state.searchfield==='' && this.state.selected.id===''){
+      this.createNote()
+      document.getElementById('notelist').firstChild.classList.add('selected')
+      //this.myRef.current.click()
+    }else{
+      document.getElementById('search').value = ''
+      this.setState({searchfield:''})
+      this.createNote()
+      //this.myRef.current.click()
+    }
+  } 
+
+  onDelNote = () => {
+    const {selected, notes} = this.state
+    if(selected.id!==''){
+      fetch('http://localhost:3000/deletenote', {
+        method: 'post',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          id:selected.id
+        })
+      })
+      .then(response => response.json())
+      .then(res => {
+        const newNotesArray = this.state.notes.slice()
+        newNotesArray.splice(selected.index,1)
+        this.setState({notes: newNotesArray,textvalue:''})
+        //clear textarea
+      })
+      .catch(console.log, 'delete note function')
+      this.removeSelected()
+      //clear selected.id
+      this.setState({selected:{id:'',index:''}})
+    }    
+  }
+
+  removeSelected = () => {
+    const noteDivs = document.getElementsByClassName('selected')
+      while (noteDivs[0]) {
+        noteDivs[0].classList.remove('selected')
+      }
+  }
+
+  onSelect = (event) => {  
+    this.removeSelected()
+    event.currentTarget.classList.add('selected')
+    const selectedId = event.currentTarget.getAttribute('id')
+    const selectedIndex = this.state.notes.findIndex(note => note.id === Number(selectedId))
+    console.log(selectedId,'selected id')
+    const title = event.currentTarget.querySelector('p.title').textContent
+    const note = event.currentTarget.querySelector('p.entry').textContent
+    const selectedNote = this.state.notes.filter(note=>{
+      if (note.id === Number(selectedId)){
+        return note
+      }
+    })
+    const tags = selectedNote[0].tags
+    this.setState({tagsvalue:tags})
+    this.setState({selected:{id:selectedId,index:selectedIndex}})
+    this.setState({textvalue:title+'\n'+note})
+  }
+
+  updateNote = () => {
+    const {recentnote} = this.state
+    const d = recentnote.updated_at
+    const n = this.toISOLocal(d)
+    //console.log('sending update')
+    fetch('http://localhost:3000/updatenote', {
+      method: 'put',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        id:recentnote.id,
+        title:recentnote.title,
+        note:recentnote.note,
+        tags:recentnote.tags,
+        updated_at:n
+      })
+    })
+    .catch(console.log, 'update note function')
+  }
+
+  onblur = (event) => {
+    const {recentnote} = this.state
+    recentnote === undefined || recentnote.length === 0 ? console.log('empty array') : this.updateNote
+  }
+
+  onNoteInput = (event) => {
+    const {selected,notes,textvalue} = this.state 
+    if(selected.id===''){
+      this.createNote()
+      document.getElementById('notelist').firstChild.classList.add('selected')
+    }else{
+      const titleEntry = event.target.value.split('\n',1)
+      const title = titleEntry[0]
+      const initEntry = event.target.value.replace(title,'')
+      const entry = initEntry.trim()
+      const tags = document.getElementById('taginput').value
+      const selectedId = Number(selected.id)
+      const newNotes = notes.map(note => {
+        if (note.id === selectedId){
+          return Object.assign({}, note, {
+            title: title,
+            note: entry,
+            tags:tags,
+            updated_at:new Date()
+          })
+        }else{
+          return note;
+        }
+      })
+      const sortedNotes = newNotes.sort((a, b) => {
+          a = new Date(a.updated_at)
+          b = new Date(b.updated_at)
+        return b - a
+      })
+      
+      this.setState({notes:newNotes, recentnote:newNotes[0],textvalue:event.target.value})
+      //this.setState({selected:{id:selectedId,index:0}})
+      clearTimeout(this.timer)
+      this.timer = setTimeout(this.updateNote, 1500)
+      const noteDivs = document.getElementsByClassName('selected')
+      if(noteDivs.length===0){
+        console.log(noteDivs)
+      }else{
+        while (noteDivs[0]) {
+          noteDivs[0].classList.remove('selected')
+        }
+        document.getElementById('notelist').firstChild.classList.add('selected')
+      }
+    }
+  }
+  /* ------------------------------------ Tags component ---------------------------
+  onTagInput = (event) => {
+    const {selected,notes,tagsvalue} = this.state
+    const selectedId = Number(selected.id)
+    const newNotes = notes.map(note => {
+        if (note.id === selectedId){
+          return Object.assign({}, note, {
+            tags:event.target.value,
+            updated_at:new Date()
+          })
+        }else{
+          return note;
+        }
+      })
+      const sortedNotes = newNotes.sort((a, b) => {
+          a = new Date(a.updated_at)
+          b = new Date(b.updated_at)
+        return b - a
+      })
+    this.setState({notes:newNotes, recentnote:newNotes[0],tagsvalue:event.target.value})
+    clearTimeout(this.timer)
+    this.timer = setTimeout(this.updateNote, 1500)
+  }
+
+  onShowTags = (event) => {
+    this.setState({showTags:true}, () => {document.addEventListener('click', this.onHideTags)})
+  }
+
+  onHideTags = (event) => {
+    this.setState({showTags:false}, () => {document.removeEventListener('click', this.onHideTags)})
+  }
+
+  onListClick = (event) => {
+    this.removeSelected()
+    document.getElementById('search').value = event.target.textContent
+    this.setState({searchfield:event.target.textContent, textvalue:'', tagsvalue:''})
+    this.setState({selected:{id:'',index:''}})
+  }
+  ----------------------------------------------------------------------------------*/
+  componentWillMount() {
+        this.timer = null;
+  }
+
+  toISOLocal = (d) => {
+  var z = n => (n<10? '0':'')+n;
+  var off = d.getTimezoneOffset();
+  var sign = off < 0? '+' : '-';
+  off = Math.abs(off);
+
+  return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' +
+         z(d.getDate()) + 'T' + z(d.getHours()) + ':'  + z(d.getMinutes()) + 
+         ':' + z(d.getSeconds()) + sign + z(off/60|0) + z(off%60); 
+  }
+
+  render() {
+    const { notes, searchfield, textvalue, tagsvalue, showTags} = this.state
+    //console.log(notes, 'this is the notes state')
+    //console.log(this.state.showTags, 'render showTags')
+    const filteredNotes = notes.filter(note => {
+      return note.title.toLowerCase().includes(searchfield.toLowerCase())
+      || note.note.toLowerCase().includes(searchfield.toLowerCase())
+      || note.tags.toLowerCase().includes(searchfield.toLowerCase())
+    })
+
+    return (
+      <div className="App avenir">
+        <div className="mw9 center search-nav">
+          <div className="cf">
+            <Search searchChange={this.onSearchChange}/>
+            <Nav newNote={this.onNewNote} delNote={this.onDelNote}/>
+          </div>
+        </div>
+        <div className="mw9 center tags-dropdown">
+          <div className="cf">
+            <TagsDropdown notes={notes} handleShowTags={this.onShowTags} showTags={showTags} handleTagsList={this.onListClick}/>
+            <Tags tagsvalue={tagsvalue} handleTagInput={this.onTagInput} onblur={this.onblur}/>
+          </div>
+        </div>
+        <div className="mw9 center notes-entries">
+          <div className="cf">
+            <NotesList notes={filteredNotes} select={this.onSelect} myref={this.myRef}/>
+            <NoteEntry textvalue={textvalue} onNoteInput={this.onNoteInput} onblur={this.onblur}/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+}
+
+export default App;

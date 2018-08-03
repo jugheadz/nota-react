@@ -1,0 +1,51 @@
+html,body{
+	height: 100%;
+}
+#root,.App,.homepage{
+	height: inherit;
+}
+.search-nav{
+	height: 7%;
+}
+/*.tags-dropdown{
+	height: 5%;
+}*/
+.notes-entries{
+	height: 93%; /*orig value 88% */
+}
+.cf{
+	height: 100%;
+}
+textarea, input, button, .addTags{
+    border: none;
+    overflow: auto;
+    outline: none;
+    resize: none;
+
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+}
+button{
+    cursor: pointer;
+}
+.note:hover{
+    background-color: #f4f4f4;
+}
+.selected, .selected:hover{
+    background-color: #96ccff;
+}
+.title,.entry{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80%;
+}
+#delNoteBtn, #newNoteBtn, #signout{
+    cursor: pointer;
+}
+ul {
+   list-style-position: outside;
+   /* You may want to add an additional padding-left: */
+   padding-left: 1em;
+}
